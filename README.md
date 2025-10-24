@@ -28,80 +28,100 @@ One can search, navigate, and modify data using a parser. It’s versatile and s
 ```python
 import requests
 from bs4 import BeautifulSoup
-import matplotlib.pyplot as plt
 import re
+import matplotlib.pyplot as plt
 
-def convert_price_to_float(price_str):
-    # Remove currency symbols and commas, then convert to float
-    clean_price = re.sub(r'[^\d.]', '', price_str)  # Keep digits and decimal point
-    return float(clean_price) if clean_price else 0.0
+def convert_price_to_float(price):
+    """Convert price string like '₹1,299.00' → 1299.0"""
+    price = re.sub(r'[^\d.]', '', price)
+    parts = price.split('.')
+    if len(parts) > 1:
+        price = parts[0] + '.' + ''.join(parts[1:])
+    return float(price) if price else 0.0
 
-def get_snapdeal_products(search_query):
-    url = f'https://www.snapdeal.com/search?keyword={search_query.replace(" ", "%20")}'
+def get_amazon_products(search_query):
+    base_url = 'https://www.amazon.in'
     headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36'
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                      "AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/114.0.0.0 Safari/537.36",
+        "Accept-Language": "en-IN,en;q=0.9",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive"
     }
 
-    response = requests.get(url, headers=headers)
+    search_query = search_query.replace(' ', '+')
+    url = f'{base_url}/s?k={search_query}'
+
+    session = requests.Session()
+    response = session.get(url, headers=headers)
     products_data = []
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
-        products = soup.find_all('div', {'class': 'product-tuple-listing'})
+        product_elements = soup.select('div.s-main-slot div[data-component-type="s-search-result"]')
 
-        for product in products:
-            title = product.find('p', {'class': 'product-title'})
-            price = product.find('span', {'class': 'product-price'})
-            if price:
-                product_price = convert_price_to_float(price.get('data-price', '0'))
+        for product in product_elements:
+            # Product title
+            title_elem = product.select_one('h2 span')
+            title = title_elem.text.strip() if title_elem else 'No Title'
+
+            # Current price
+            price_container = product.select_one('span.a-price')
+            if price_container:
+                price_whole = price_container.select_one('span.a-price-whole')
+                price_fraction = price_container.select_one('span.a-price-fraction')
+                if price_whole and price_fraction:
+                    price = f"{price_whole.text.strip()}.{price_fraction.text.strip()}"
+                elif price_whole:
+                    price = price_whole.text.strip()
+                else:
+                    price = '0'
             else:
-                product_price = 0.0  # Default to 0 if no price found
-            rating = product.find('div', {'class': 'filled-stars'})  # Assuming rating is shown with this class
+                price = '0'
 
-            if title and price:
-                product_name = title.text.strip()
-                #product_price = re.sub(r'[^\d.]', '', price.text.strip())  # Remove non-numeric chars for price
-                product_rating = rating['style'].split(';')[0].split(':')[-1] if rating else "No rating"
-                products_data.append({
-                    'Product': product_name,
-                    'Price': float(product_price),
-                    'Rating': product_rating
-                })
-                print(f'Product: {product_name}')
-                print(f'Price: {product_price}')
-                print(f'Rating: {product_rating}')
-                print('---')
+            # List price / Original price for discount calculation
+            list_price_elem = product.select_one('span.a-price.a-text-price span.a-offscreen')
+            list_price = convert_price_to_float(list_price_elem.text) if list_price_elem else convert_price_to_float(price)
+
+            current_price = convert_price_to_float(price)
+            # Discount percentage
+            discount = round(((list_price - current_price) / list_price) * 100, 2) if list_price > current_price else 0.0
+
+            products_data.append({
+                'Product': title,
+                'Price': current_price,
+                'Discount (%)': discount
+            })
+
+            print(f'Product: {title}\nPrice: ₹{current_price}\nDiscount: {discount}%\n---')
 
     else:
-        print('Failed to retrieve content')
+        print(f'Failed to fetch Amazon page: {response.status_code}')
 
-    return products_data
+    # Sort by price ascending
+    return sorted(products_data, key=lambda x: x['Price'])
 
-# Main execution block
-if __name__ == "__main__":
-    search_query = input('Enter product to search on Snapdeal: ')
-    products = get_snapdeal_products(search_query)
+# Main
+search_query = input('Enter product to search on Amazon: ')
+products = get_amazon_products(search_query)
 
-def visualize_product_data(products):
-    if products:
-        # Preparing data for plotting
-        #product_names = [product['Product'][:25] + '...' if len(product['Product']) > 25 else product['Product'] for product in products]
-        product_names = [product['Product'] for product in products]
-        product_prices = [product['Price'] for product in products]
+# Plotting
+if products:
+    product_names = [p['Product'][:30] + '...' if len(p['Product']) > 30 else p['Product'] for p in products]
+    product_prices = [p['Price'] for p in products]
+    product_discounts = [p['Discount (%)'] for p in products]
 
-        # Creating the bar chart
-        plt.figure(figsize=(12, 8))
-        bars = plt.barh(product_names, product_prices, color='skyblue')  # Horizontal bar chart
-
-        plt.xlabel('Price in INR')  # Label for x-axis
-        plt.ylabel('Product')  # Label for y-axis
-        plt.title(f'Prices of Products on Snapdeal')
-        plt.tight_layout()
-        # Displaying the plot
-        plt.show()
-    else:
-        print('No products to display.')
-visualize_product_data(products)
+    plt.figure(figsize=(12, 8))
+    bars = plt.barh(range(len(product_prices)), product_prices, color='skyblue')
+    plt.xlabel('Price (₹)')
+    plt.ylabel('Product')
+    plt.title(f'Products, Prices & Discounts on Amazon for "{search_query}"')
+    plt.yticks(range(len(product_prices)), [f"{n} ({d}%)" for n, d in zip(product_names, product_discounts)])
+    plt.tight_layout()
+    plt.show()
+else:
+    print('No products found.')
 
 ```
 ### Output:
