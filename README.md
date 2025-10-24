@@ -1,5 +1,6 @@
 ### EX8 Web Scraping On E-commerce platform using BeautifulSoup
-### DATE: 
+### NAME - HARSHITHA V
+### REG NO - 212223230074
 ### AIM: To perform Web Scraping on Snapdeal using (beautifulsoup) Python.
 ### Description: 
 <div align = "justify">
@@ -126,10 +127,13 @@ else:
 ```
 ### Output:
 
-<img width="1283" height="424" alt="image" src="https://github.com/user-attachments/assets/c20f4a23-3d83-4277-aad8-392328e58ee5" />
-<img width="1291" height="426" alt="image" src="https://github.com/user-attachments/assets/8e30083e-7d1b-459b-b54b-57b5d22aafae" />
-<img width="1289" height="428" alt="image" src="https://github.com/user-attachments/assets/6bb26ff9-f096-4830-8d00-ff1b62335587" />
-<img width="1282" height="377" alt="image" src="https://github.com/user-attachments/assets/4c7996b7-6019-45df-823e-86c4b173bf38" />
+<img width="1691" height="575" alt="image" src="https://github.com/user-attachments/assets/d5065a10-bb42-47d7-a219-044da26cc610" />
+<img width="1678" height="574" alt="image" src="https://github.com/user-attachments/assets/ae8d394c-6a87-4bf4-9e0f-e2931ed45b82" />
+<img width="1505" height="421" alt="image" src="https://github.com/user-attachments/assets/598747d5-60d7-4afa-aa93-254114ba82fd" />
+<img width="1309" height="735" alt="image" src="https://github.com/user-attachments/assets/a270c827-77d2-4e6f-b0fe-f6ffc2bc1fab" />
+
+
+
 
 ### Result:
 
